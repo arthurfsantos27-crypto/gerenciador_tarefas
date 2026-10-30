@@ -4,6 +4,9 @@ const cors = require('cors');
 
 const app = express();
 const db = require('./db');
+const { resolve } = require('node:dns');
+const { json } = require('body-parser');
+const { error } = require('node:console');
 
 const PORT = 3000;
 
@@ -21,7 +24,7 @@ db.query('SELECT * FROM tasks', (err, results) => {
 });
 
 
-//GET com id
+// GET com id
 app.get('/tasks/:id', (req, res) => {
     db.query('SELECT * FROM tasks WHERE id = ?', [req.params.id], (err, results) => {
         if(err) return res.status(500).json({error: err.message});
@@ -31,11 +34,43 @@ app.get('/tasks/:id', (req, res) => {
 });
 
 
-//POST
+// POST
 app.post('/tasks', (req, res) => {
     const {title, description} = req.body
     db.query('INSERT INTO tasks (title, description) VALUES (?,?)', [title, description], (err, results) => {
         if(err) return res.status(500).json({error: err.message})
     res.status(201).json({id: results.insertId, title, description, completed: false});     
     });
+});
+
+
+// PUT
+app.put('/tasks/:id', (req, res) => {
+    const {title, description, completed} = req.body;
+    db.query('UPDATE tasks SET title = ?, description = ?, completed = ? WHERE id = ?', [title, description, completed, req.params.id], (err, results) => {
+            if (err) return res.status(500).json({error: err.message});
+            if(results.affectedRows === 0) return res.status(404).json({error: 'Tarefa não encontrada'});
+            res.json({id: req.params.id, title, description, completed});
+            });
+});
+
+// DELETE
+app.delete('/tasks/:id', (req, res) => {
+    db.query('DELETE FROM tasks WHERE id = ?', [req.params.id], (err, results) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        if (results.affectedRows === 0) {
+            return res.status(404).json({ error: 'Tarefa não encontrada' });
+        }
+
+        res.status(204).send();
+    });
+});
+
+
+// INICIAR SERVER
+app.listen(PORT, () => {
+    console.log(`Servidor rodando na porta ${PORT}`);
 });
